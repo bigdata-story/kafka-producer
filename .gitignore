@@ -1,0 +1,3 @@
+src/main/resources/_results/*
+target/
+.idea/

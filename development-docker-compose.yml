@@ -1,0 +1,14 @@
+version: '3.9'
+
+services:
+  producer:
+    build: .
+    volumes:
+      - "./src/main/resources:/data"
+    networks:
+      - overlay
+
+networks:
+  overlay:
+    external: true
+    name: story-network

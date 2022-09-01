@@ -7,10 +7,10 @@ lazy val root = (project in file("."))
     name := "Kafka-Producer"
   )
 
-libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "3.2.2",
-  "org.apache.spark" %% "spark-sql" % "3.2.2",
-  "org.apache.kafka" %% "kafka" % "3.2.1",
-  "org.apache.kafka" % "kafka-clients" % "3.2.1",
-)
-
+// https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "3.2.1"
+libraryDependencies += "com.lihaoyi" %% "upickle" % "2.0.0"
+// https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.36"
+// https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.36"

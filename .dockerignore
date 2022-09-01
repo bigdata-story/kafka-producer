@@ -1,0 +1,5 @@
+.idea
+.bsp
+src/main/resources/*
+target/
+.git

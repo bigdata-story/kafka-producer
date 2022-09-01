@@ -1,7 +1,8 @@
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
-import org.apache.spark.sql.SparkSession
 
+import java.io.File
 import java.time.ZoneOffset
+import scala.io.Source
 
 object Producer extends App {
 
@@ -10,57 +11,51 @@ object Producer extends App {
   import java.time.format.DateTimeFormatter._
 
   // every second will be factored in this number
-  val timeFactor = 0.001
+  val timeFactor = scala.util.Properties.envOrElse("TIME_FACTOR", "0.001").toFloat
+  println(timeFactor)
   // topic
-  val topic = "text_topic"
-
-  val sparkProps = new Properties()
-  sparkProps.put("bootstrap.servers", "localhost:9092")
-  sparkProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-  sparkProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-  val spark = SparkSession.builder.master("local[1]").appName("Producer").getOrCreate
-
-  val df = spark.read.json("src/main/resources/_results/20150801-20151101-raw_user_activity-converted-0.json")
-  df.printSchema()
-  df.show(10)
-  val orderedDF = df.orderBy("event_time")
-  orderedDF.show(10)
-  var tempDate = LocalDateTime.parse(orderedDF.first().getAs[String]("event_time"), ISO_DATE_TIME)
-
+  val topic = scala.util.Properties.envOrElse("TOPIC", "events_topic")
+  val dataPath = scala.util.Properties.envOrElse("DATA_PATH", "src/main/resources")
+  val bootstrapServers = scala.util.Properties.envOrElse("BOOTSTRAP_SERVERS", "localhost:9092")
   val kafkaProps: Properties = new Properties()
-  kafkaProps.put("bootstrap.servers", "localhost:9092")
-  kafkaProps.put("key.serializer",
-    "org.apache.kafka.common.serialization.StringSerializer")
-  kafkaProps.put("value.serializer",
-    "org.apache.kafka.common.serialization.StringSerializer")
+  kafkaProps.put("bootstrap.servers", bootstrapServers)
+  kafkaProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+  kafkaProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
   kafkaProps.put("acks", "all")
   val producer = new KafkaProducer[String, String](kafkaProps)
+  LazyList.from(new File(dataPath).listFiles).filter(_.isFile).sorted.map(Source.fromFile).foreach(
+    source => {
+      var tempDate: LocalDateTime = null
+      source.bufferedReader().lines().forEach(
+        line => {
+          val event = ujson.read(line).obj
+          val rowDate = LocalDateTime.parse(event("event_time").str, ISO_DATE_TIME)
+          if (tempDate == null) {
+            tempDate = rowDate
+          }
+          val diff = rowDate.toEpochSecond(ZoneOffset.UTC) - tempDate.toEpochSecond(ZoneOffset.UTC)
+          println(s"Will wait for $diff ...")
+          Thread.sleep((diff * 1000 * timeFactor).toLong)
+          tempDate = rowDate
+          val key = s"${event("user_id").str}${event("course_id").str}"
+          try {
+            val record = new ProducerRecord[String, String](topic, key, line)
+            val metadata = producer.send(record)
+            printf(s"sent record(key=%s value=%s) " +
+              "meta(partition=%d, offset=%d)\n",
+              record.key(), record.value(),
+              metadata.get().partition(),
+              metadata.get().offset()
+            )
+            println("-----------")
 
-
-  orderedDF.rdd.collect().foreach(row => {
-    val rowDate = LocalDateTime.parse(row.getAs("event_time"), ISO_DATE_TIME)
-    val diff = rowDate.toEpochSecond(ZoneOffset.UTC) - tempDate.toEpochSecond(ZoneOffset.UTC)
-    println(s"Will wait for $diff ...")
-    Thread.sleep((diff * 1000 * timeFactor).toLong)
-    tempDate = rowDate
-    println(row)
-    println("-----------")
-    val key = s"${row.getAs("user_id")}${row.getAs("course_id")}"
-    try {
-      val record = new ProducerRecord[String, String](topic, key, row.json)
-      val metadata = producer.send(record)
-      printf(s"sent record(key=%s value=%s) " +
-        "meta(partition=%d, offset=%d)\n",
-        record.key(), record.value(),
-        metadata.get().partition(),
-        metadata.get().offset())
-
-    } catch {
-      case e: Exception => e.printStackTrace()
-    } finally {
-      producer.close()
+          } catch {
+            case e: Exception => e.printStackTrace()
+          } finally {
+          }
+        }
+      )
     }
-
-  })
-
+  )
+  producer.close()
 }

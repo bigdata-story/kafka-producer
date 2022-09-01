@@ -14,7 +14,9 @@ object Producer extends App {
   val timeFactor = scala.util.Properties.envOrElse("TIME_FACTOR", "0.001").toFloat
   println(timeFactor)
   // topic
-  val topic = scala.util.Properties.envOrElse("TOPIC", "events_topic")
+  val eventByUserIdTopic = scala.util.Properties.envOrElse("EVENT_USER_ID", "events_by_user_id");
+  val eventByCourseIdTopic = scala.util.Properties.envOrElse("EVENT_COURSE_ID", "events_by_course_id");
+  val eventByUserIdCourseIdTopic = scala.util.Properties.envOrElse("EVENT_USER_ID_COURSE_ID", "events_by_user_id_course_id");
   val dataPath = scala.util.Properties.envOrElse("DATA_PATH", "src/main/resources")
   val bootstrapServers = scala.util.Properties.envOrElse("BOOTSTRAP_SERVERS", "localhost:9092")
   val kafkaProps: Properties = new Properties()
@@ -37,18 +39,14 @@ object Producer extends App {
           println(s"Will wait for $diff ...")
           Thread.sleep((diff * 1000 * timeFactor).toLong)
           tempDate = rowDate
-          val key = s"${event("user_id").str}${event("course_id").str}"
+          val userId = s"${event("user_id").str}"
+          val courseId = s"${event("course_id").str}"
+          val courseIdWithUserId = s"${event("user_id")}${event("course_id")}"
           try {
-            val record = new ProducerRecord[String, String](topic, key, line)
-            val metadata = producer.send(record)
-            printf(s"sent record(key=%s value=%s) " +
-              "meta(partition=%d, offset=%d)\n",
-              record.key(), record.value(),
-              metadata.get().partition(),
-              metadata.get().offset()
-            )
+            producer.send(new ProducerRecord[String, String](eventByUserIdTopic, userId, line))
+            producer.send(new ProducerRecord[String, String](eventByCourseIdTopic, courseId, line))
+            producer.send(new ProducerRecord[String, String](eventByUserIdCourseIdTopic, courseIdWithUserId, line))
             println("-----------")
-
           } catch {
             case e: Exception => e.printStackTrace()
           } finally {

@@ -15,7 +15,6 @@ object Producer extends App {
   println(timeFactor)
   // topic
   val eventByUserIdTopic = scala.util.Properties.envOrElse("EVENT_USER_ID", "events_by_user_id");
-  val eventByCourseIdTopic = scala.util.Properties.envOrElse("EVENT_COURSE_ID", "events_by_course_id");
   val eventByUserIdCourseIdTopic = scala.util.Properties.envOrElse("EVENT_USER_ID_COURSE_ID", "events_by_user_id_course_id");
   val videoEventByUserIdCourseIdTopic = scala.util.Properties.envOrElse("VIDEO_EVENT_USER_ID_COURSE_ID", "video_events_by_user_id_course_id");
   val dataPath = scala.util.Properties.envOrElse("DATA_PATH", "src/main/resources")
@@ -41,14 +40,12 @@ object Producer extends App {
           Thread.sleep((diff * 1000 * timeFactor).toLong)
           tempDate = rowDate
           val userId = s"${event("user_id").str}"
-          val courseId = s"${event("course_id").str}"
           val courseIdWithUserId = s"${event("user_id")}${event("course_id")}"
           try {
             producer.send(new ProducerRecord[String, String](eventByUserIdTopic, userId, line))
-            producer.send(new ProducerRecord[String, String](eventByCourseIdTopic, courseId, line))
             producer.send(new ProducerRecord[String, String](eventByUserIdCourseIdTopic, courseIdWithUserId, line))
             val ls = List("pause_video", "play_video", "stop_video")
-            if(ls.contains(event("event_type"))) {
+            if(ls.contains(event("event_type").str)) {
               producer.send(new ProducerRecord[String, String](videoEventByUserIdCourseIdTopic, courseIdWithUserId, line))
             }
             println("-----------")

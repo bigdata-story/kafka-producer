@@ -12,6 +12,6 @@ RUN sbt compile
 
 ENV DATA_PATH="/data"
 ENV BOOTSTRAP_SERVERS="kafka1:9092"
-ENV TIME_FACTOR="0.1"
+ENV TIME_FACTOR="0.001"
 
 CMD sbt run

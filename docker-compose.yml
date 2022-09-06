@@ -3,6 +3,8 @@ version: '3.9'
 services:
   producer:
     build: .
+    environment:
+      - TIMEOUT=1000
     volumes:
       - "./src/main/resources:/data"
     networks:

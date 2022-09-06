@@ -1,7 +1,8 @@
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 
 import java.io.File
-import java.time.ZoneOffset
+import java.time.{ZoneId, ZoneOffset}
+import java.util.Date
 import scala.io.Source
 
 object Producer extends App {
@@ -41,6 +42,7 @@ object Producer extends App {
           tempDate = rowDate
           val userId = s"${event("user_id").str}"
           val courseIdWithUserId = s"${event("user_id")}${event("course_id")}"
+          event("event_time") = LocalDateTime.parse(LocalDateTime.now().toString, ISO_DATE_TIME).toString
           try {
             producer.send(new ProducerRecord[String, String](eventByUserIdTopic, userId, line))
             producer.send(new ProducerRecord[String, String](eventByUserIdCourseIdTopic, courseIdWithUserId, line))

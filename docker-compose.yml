@@ -7,6 +7,16 @@ services:
       - "./src/main/resources:/data"
     networks:
       - overlay
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 700M
+        reservations:
+          cpus: "0.5"
+          memory: 500M
+
 
 networks:
   overlay:

@@ -43,12 +43,13 @@ object Producer extends App {
           val userId = s"${event("user_id").str}"
           val courseIdWithUserId = s"${event("user_id")}${event("course_id")}"
           event("event_time") = LocalDateTime.parse(LocalDateTime.now().toString, ISO_DATE_TIME).toString
+          val tmp = event.render()
           try {
-            producer.send(new ProducerRecord[String, String](eventByUserIdTopic, userId, line))
-            producer.send(new ProducerRecord[String, String](eventByUserIdCourseIdTopic, courseIdWithUserId, line))
+            producer.send(new ProducerRecord[String, String](eventByUserIdTopic, userId, tmp))
+            producer.send(new ProducerRecord[String, String](eventByUserIdCourseIdTopic, courseIdWithUserId, tmp))
             val ls = List("pause_video", "play_video", "stop_video")
             if(ls.contains(event("event_type").str)) {
-              producer.send(new ProducerRecord[String, String](videoEventByUserIdCourseIdTopic, courseIdWithUserId, line))
+              producer.send(new ProducerRecord[String, String](videoEventByUserIdCourseIdTopic, courseIdWithUserId, tmp))
             }
             println("-----------")
           } catch {
